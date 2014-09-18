@@ -2,6 +2,13 @@ import java.io.*;
 import java.net.*;
 import java.text.SimpleDateFormat;
 import java.util.*;
+import java.sql.Connection;
+import java.sql.DriverManager;
+import java.sql.ResultSet;
+import java.sql.SQLException;
+import java.sql.Statement;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /*
  * The server that can be run both as a console application or a GUI
@@ -155,10 +162,22 @@ public class Server {
 	 * > java Server portNumber
 	 * If the port number is not specified 1500 is used
 	 */ 
-	public static void main(String[] args) {
+	public static void main(String[] args) throws SQLException {
 		// start server on port 1500 unless a PortNumber is specified 
 		int portNumber = 1500;
+		String username = null;
+		String password = null;
 		switch(args.length) {
+			case 3:
+				//java Server register username password
+				if(args[0].equals("-r")) {
+					username = args[1];
+					password = args[2];
+				}
+				break;
+			case 2:
+				System.out.println("Invalid number of arguments");
+				return;
 			case 1:
 				try {
 					portNumber = Integer.parseInt(args[0]);
@@ -175,6 +194,33 @@ public class Server {
 				return;
 				
 		}
+		//Test DB connection
+		Connection chatCon = DriverManager.getConnection("jdbc:mysql://localhost/chatdb", "chatadmin", "chat");
+		Statement st = chatCon.createStatement();
+		
+		//Register a new account
+		if(args[0].equals("-r")) {
+			System.out.println("Hit 1 " + username + " " + password);
+			String register = ("INSERT INTO Users (username, userpass, rank) "
+					+ "VALUES ('" + username + "', '" + password + "', 1);");
+			try {
+				st.executeUpdate(register);
+				System.out.println("User registered!");
+				int userid = 0;
+				String name = null;
+				String checkRegister = ("SELECT * FROM Users WHERE username = '" + username + "'");
+				ResultSet rs = st.executeQuery(checkRegister);
+				while(rs.next()) {
+					userid = rs.getInt("userID");
+					name = rs.getString("username");
+					System.out.println("User addded: Id=" + userid + " Name=" + name);
+				}
+			} catch (SQLException e) {
+				System.err.println(e);
+			}
+			return;
+		}
+		
 		// create a server object and start it
 		Server server = new Server(portNumber);
 		server.start();
@@ -210,7 +256,16 @@ public class Server {
 				// read the username
 				username = (String) sInput.readObject();
 				password = (String) sInput.readObject();
-				display(username + " just connected. Password: " + password);
+				Connection chatCon = DriverManager.getConnection("jdbc:mysql://localhost/chatdb", "chatadmin", "chat");
+				Statement st = chatCon.createStatement();
+				String checkUser = ("SELECT * FROM Users WHERE username = '" + username + "'"
+						+ " AND userpass = '" + password + "';");
+				ResultSet rs = st.executeQuery(checkUser);
+				if(rs.next()) {
+					display(rs.getString("username") + " just connected.");
+				} else {
+					display(username + "tried to connect, but is not registered or invalid password");
+				}
 			}
 			catch (IOException e) {
 				display("Exception creating new Input/output Streams: " + e);
@@ -219,8 +274,10 @@ public class Server {
 			// have to catch ClassNotFoundException
 			// but I read a String, I am sure it will work
 			catch (ClassNotFoundException e) {
+			} 
+			catch (SQLException ex) {
 			}
-            date = new Date().toString() + "\n";
+			date = new Date().toString() + "\n";
 		}
 
 		// what will run forever

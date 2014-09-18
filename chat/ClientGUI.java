@@ -110,8 +110,8 @@ public class ClientGUI extends JFrame implements ActionListener {
 		login.setEnabled(true);
 		logout.setEnabled(false);
 		whoIsIn.setEnabled(false);
-		label.setText("Could not connect");
-		tf.setText("Anonymous");
+		label.setText("Disconnected");
+		//tf.setText("Anonymous");
 		// reset port number and host name as a construction time
 		tfPort.setText("" + defaultPort);
 		tfServer.setText(defaultHost);

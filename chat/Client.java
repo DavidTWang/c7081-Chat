@@ -3,6 +3,8 @@
 import java.net.*;
 import java.io.*;
 import java.util.*;
+import java.util.logging.Level;
+import java.util.logging.Logger;
 
 /*
  * The Client that can be run both as a console or a GUI
@@ -55,7 +57,7 @@ public class Client  {
 		} 
 		// if it failed not much I can so
 		catch(Exception ec) {
-			display("Error connectiong to server:" + ec);
+			display("Error connecting to server:" + ec);
 			return false;
 		}
 		
@@ -80,6 +82,7 @@ public class Client  {
 		try
 		{
 			sOutput.writeObject(username);
+			sOutput.writeObject(password);
 		}
 		catch (IOException eIO) {
 			display("Exception doing login : " + eIO);
@@ -125,7 +128,7 @@ public class Client  {
 			if(sOutput != null) sOutput.close();
 		}
 		catch(Exception e) {} // not much else I can do
-        try{
+		try{
 			if(socket != null) socket.close();
 		}
 		catch(Exception e) {} // not much else I can do
