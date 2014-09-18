@@ -14,7 +14,7 @@ public class ClientGUI extends JFrame implements ActionListener {
 	// to hold the Username and later on the messages
 	private JTextField tf;
 	// to hold the server address an the port number
-	private JTextField tfServer, tfPort;
+	private JTextField tfServer, tfPort, tfUser, tfPass;
 	// to Logout and get the list of the users
 	private JButton login, logout, whoIsIn;
 	// for the chat room
@@ -35,10 +35,11 @@ public class ClientGUI extends JFrame implements ActionListener {
 		defaultHost = host;
 		
 		// The NorthPanel with:
-		JPanel northPanel = new JPanel(new GridLayout(3,1));
+		JPanel northPanel = new JPanel(new GridLayout(4,1));
 		// the server name anmd the port number
 		JPanel serverAndPort = new JPanel(new GridLayout(1,5, 1, 3));
 		// the two JTextField with default value for server address and port number
+		JPanel userAndPass = new JPanel(new GridLayout(1,5,1,3));
 		tfServer = new JTextField(host);
 		tfPort = new JTextField("" + port);
 		tfPort.setHorizontalAlignment(SwingConstants.RIGHT);
@@ -52,7 +53,16 @@ public class ClientGUI extends JFrame implements ActionListener {
 		northPanel.add(serverAndPort);
 
 		// the Label and the TextField
-		label = new JLabel("Enter your username below", SwingConstants.CENTER);
+		userAndPass.add(new JLabel("Username:  "));
+		tfUser = new JTextField("");
+		tfPass = new JTextField("");
+		userAndPass.add(tfUser);
+		userAndPass.add(new JLabel("Password  "));
+		userAndPass.add(tfPass);
+		userAndPass.add(new JLabel(""));
+		northPanel.add(userAndPass);
+
+		label = new JLabel("Chat", SwingConstants.CENTER);
 		northPanel.add(label);
 		tf = new JTextField("Anonymous");
 		tf.setBackground(Color.WHITE);
@@ -100,14 +110,14 @@ public class ClientGUI extends JFrame implements ActionListener {
 		login.setEnabled(true);
 		logout.setEnabled(false);
 		whoIsIn.setEnabled(false);
-		label.setText("Enter your username below");
+		label.setText("Could not connect");
 		tf.setText("Anonymous");
 		// reset port number and host name as a construction time
 		tfPort.setText("" + defaultPort);
 		tfServer.setText(defaultHost);
 		// let the user change them
-		tfServer.setEditable(false);
-		tfPort.setEditable(false);
+		tfServer.setEditable(true);
+		tfPort.setEditable(true);
 		// don't react to a <CR> after the username
 		tf.removeActionListener(this);
 		connected = false;
@@ -140,11 +150,14 @@ public class ClientGUI extends JFrame implements ActionListener {
 
 		if(o == login) {
 			// ok it is a connection request
-			String username = tf.getText().trim();
+			String username = tfUser.getText().trim();
 			// empty username ignore it
 			if(username.length() == 0)
 				return;
 			// empty serverAddress ignore it
+			String password = tfPass.getText().trim();
+			if(password.length() == 0)
+				return;
 			String server = tfServer.getText().trim();
 			if(server.length() == 0)
 				return;
@@ -161,7 +174,7 @@ public class ClientGUI extends JFrame implements ActionListener {
 			}
 
 			// try creating a new Client with GUI
-			client = new Client(server, port, username, this);
+			client = new Client(server, port, username, password, this);
 			// test if we can start the Client
 			if(!client.start()) 
 				return;

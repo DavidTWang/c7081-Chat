@@ -189,7 +189,7 @@ public class Server {
 		// my unique id (easier for deconnection)
 		int id;
 		// the Username of the Client
-		String username;
+		String username, password;
 		// the only type of message a will receive
 		ChatMessage cm;
 		// the date I connect
@@ -209,7 +209,8 @@ public class Server {
 				sInput  = new ObjectInputStream(socket.getInputStream());
 				// read the username
 				username = (String) sInput.readObject();
-				display(username + " just connected.");
+				password = (String) sInput.readObject();
+				display(username + " just connected. Password: " + password);
 			}
 			catch (IOException e) {
 				display("Exception creating new Input/output Streams: " + e);

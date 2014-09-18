@@ -1,3 +1,5 @@
+
+
 import java.net.*;
 import java.io.*;
 import java.util.*;
@@ -16,7 +18,7 @@ public class Client  {
 	private ClientGUI cg;
 	
 	// the server, the port and the username
-	private String server, username;
+	private String server, username, password;
 	private int port;
 
 	/*
@@ -25,19 +27,20 @@ public class Client  {
 	 *  port: the port number
 	 *  username: the username
 	 */
-	Client(String server, int port, String username) {
+	Client(String server, int port, String username, String password) {
 		// which calls the common constructor with the GUI set to null
-		this(server, port, username, null);
+		this(server, port, username, password, null);
 	}
 
 	/*
 	 * Constructor call when used from a GUI
 	 * in console mode the ClienGUI parameter is null
 	 */
-	Client(String server, int port, String username, ClientGUI cg) {
+	Client(String server, int port, String username, String password, ClientGUI cg) {
 		this.server = server;
 		this.port = port;
 		this.username = username;
+		this.password = password;
 		// save if we are in GUI mode or not
 		this.cg = cg;
 	}
@@ -155,35 +158,41 @@ public class Client  {
 		int portNumber = 1500;
 		String serverAddress = "localhost";
 		String userName = "Anonymous";
+		String passwd = "blank";
 
 		// depending of the number of arguments provided we fall through
 		switch(args.length) {
 			// > javac Client username portNumber serverAddr
-			case 3:
-				serverAddress = args[2];
+			case 4:
+				serverAddress = args[3];
 			// > javac Client username portNumber
-			case 2:
+			case 3:
 				try {
-					portNumber = Integer.parseInt(args[1]);
+					portNumber = Integer.parseInt(args[2]);
 				}
 				catch(Exception e) {
 					System.out.println("Invalid port number.");
 					System.out.println("Usage is: > java Client [username] [portNumber] [serverAddress]");
 					return;
 				}
+			// > java Client username passwd
+			case 2:
+				userName = args[0];
+				passwd = args[1];
 			// > javac Client username
 			case 1: 
-				userName = args[0];
+				System.out.println("Please include your password");
+				return;
 			// > java Client
 			case 0:
 				break;
 			// invalid number of arguments
 			default:
-				System.out.println("Usage is: > java Client [username] [portNumber] {serverAddress]");
+				System.out.println("Usage is: > java Client [username] [portNumber] [serverAddress]");
 			return;
 		}
 		// create the Client object
-		Client client = new Client(serverAddress, portNumber, userName);
+		Client client = new Client(serverAddress, portNumber, userName, passwd);
 		// test if we can start the connection to the Server
 		// if it failed nothing we can do
 		if(!client.start())
