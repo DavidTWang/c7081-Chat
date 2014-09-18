@@ -1,6 +1,3 @@
-
-package c7081.chat;
-
 import javax.swing.*;
 import java.awt.*;
 import java.awt.event.*;
