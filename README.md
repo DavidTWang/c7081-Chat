@@ -7,4 +7,4 @@ Works:
 Connects and sends messages
 
 In progress:
-Users
+Creating and Managing Users
