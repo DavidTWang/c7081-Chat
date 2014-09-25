@@ -195,36 +195,37 @@ public class Server {
 				
 		}
 		//Test DB connection
-		Connection chatCon = DriverManager.getConnection("jdbc:mysql://localhost/chatdb", "chatadmin", "chat");
-		Statement st = chatCon.createStatement();
+//		Connection chatCon = DriverManager.getConnection("jdbc:mysql://localhost/chatdb", "chatadmin", "chat");
+//		Statement st = chatCon.createStatement();
 		
 		//Register a new account
-		if(args[0].equals("-r")) {
-			System.out.println("Hit 1 " + username + " " + password);
-			String register = ("INSERT INTO Users (username, userpass, rank) "
-					+ "VALUES ('" + username + "', '" + password + "', 1);");
-			try {
-				st.executeUpdate(register);
-				System.out.println("User registered!");
-				int userid = 0;
-				String name = null;
-				String checkRegister = ("SELECT * FROM Users WHERE username = '" + username + "'");
-				ResultSet rs = st.executeQuery(checkRegister);
-				while(rs.next()) {
-					userid = rs.getInt("userID");
-					name = rs.getString("username");
-					System.out.println("User addded: Id=" + userid + " Name=" + name);
-				}
-			} catch (SQLException e) {
-				System.err.println(e);
-			}
-			return;
-		}
+//		if(args[0].equals("-r")) {
+//			System.out.println("Hit 1 " + username + " " + password);
+//			String register = ("INSERT INTO Users (username, userpass, rank) "
+//					+ "VALUES ('" + username + "', '" + password + "', 1);");
+//			try {
+//				st.executeUpdate(register);
+//				System.out.println("User registered!");
+//				int userid = 0;
+//				String name = null;
+//				String checkRegister = ("SELECT * FROM Users WHERE username = '" + username + "'");
+//				ResultSet rs = st.executeQuery(checkRegister);
+//				while(rs.next()) {
+//					userid = rs.getInt("userID");
+//					name = rs.getString("username");
+//					System.out.println("User addded: Id=" + userid + " Name=" + name);
+//				}
+//			} catch (SQLException e) {
+//				System.err.println(e);
+//			}
+//			return;
+//		}
 		
 		// create a server object and start it
 		Server server = new Server(portNumber);
 		server.start();
 	}
+
 
 	/** One instance of this thread will run for each client */
 	class ClientThread extends Thread {
@@ -236,6 +237,7 @@ public class Server {
 		int id;
 		// the Username of the Client
 		String username, password;
+		int userRank;
 		// the only type of message a will receive
 		ChatMessage cm;
 		// the date I connect
@@ -256,16 +258,22 @@ public class Server {
 				// read the username
 				username = (String) sInput.readObject();
 				password = (String) sInput.readObject();
+				
 				Connection chatCon = DriverManager.getConnection("jdbc:mysql://localhost/chatdb", "chatadmin", "chat");
 				Statement st = chatCon.createStatement();
 				String checkUser = ("SELECT * FROM Users WHERE username = '" + username + "'"
 						+ " AND userpass = '" + password + "';");
 				ResultSet rs = st.executeQuery(checkUser);
+				
+				
 				if(rs.next()) {
 					display(rs.getString("username") + " just connected.");
+					userRank = rs.getInt("rank");
 				} else {
-					display(username + "tried to connect, but is not registered or invalid password");
+					display(username + " tried to connect, but is not registered or invalid password");
+					sOutput.writeObject("Invalid Login");
 				}
+				
 			}
 			catch (IOException e) {
 				display("Exception creating new Input/output Streams: " + e);
@@ -274,9 +282,8 @@ public class Server {
 			// have to catch ClassNotFoundException
 			// but I read a String, I am sure it will work
 			catch (ClassNotFoundException e) {
+			} catch (SQLException ex) {
 			} 
-			catch (SQLException ex) {
-			}
 			date = new Date().toString() + "\n";
 		}
 
@@ -317,7 +324,20 @@ public class Server {
 						writeMsg((i+1) + ") " + ct.username + " since " + ct.date);
 					}
 					break;
+				case ChatMessage.REGISTER: // /register username password 
+					if(userRank == 100) {
+						// Take message, divide up "REGISTER USERNAME PASSWORD RANK"
+						// Rank is optional, defaults to 1
+						// Make sure to check if USERNAME and PASSWORD are present
+						// And then run a SQL statement (function) to add the user
+						// Check if user is already present, if so, display accordingly
+						
+					} else {
+						writeMsg("You do not have sufficent permissions to register new users\n");
+					}
+					break;
 				}
+
 			}
 			// remove myself from the arrayList containing the list of the
 			// connected Clients
@@ -361,6 +381,10 @@ public class Server {
 				display(e.toString());
 			}
 			return true;
+		}
+		private void check_user(String username, String password) {
+			// put the checking user code from ClientThread here
+			System.out.println("Checking if user exists\n");
 		}
 	}
 }

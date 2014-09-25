@@ -77,6 +77,7 @@ public class Client  {
 
 		// creates the Thread to listen from the server 
 		new ListenFromServer().start();
+		
 		// Send our username to the server this is the only message that we
 		// will send as a String. All other messages will be ChatMessage objects
 		try
@@ -182,7 +183,8 @@ public class Client  {
 			case 2:
 				userName = args[0];
 				passwd = args[1];
-			// > javac Client username
+				break;
+			// > java Client username
 			case 1: 
 				System.out.println("Please include your password");
 				return;
@@ -208,6 +210,7 @@ public class Client  {
 			System.out.print("> ");
 			// read message from user
 			String msg = scan.nextLine();
+			
 			// logout if message is LOGOUT
 			if(msg.equalsIgnoreCase("LOGOUT")) {
 				client.sendMessage(new ChatMessage(ChatMessage.LOGOUT, ""));
@@ -217,6 +220,9 @@ public class Client  {
 			// message WhoIsIn
 			else if(msg.equalsIgnoreCase("WHOISIN")) {
 				client.sendMessage(new ChatMessage(ChatMessage.WHOISIN, ""));				
+			}
+			else if(msg.equalsIgnoreCase("/REGISTER")) {
+				client.sendMessage(new ChatMessage(ChatMessage.REGISTER, ""));
 			}
 			else {				// default to ordinary message
 				client.sendMessage(new ChatMessage(ChatMessage.MESSAGE, msg));
@@ -236,6 +242,12 @@ public class Client  {
 			while(true) {
 				try {
 					String msg = (String) sInput.readObject();
+					
+					if(msg.equalsIgnoreCase("Invalid Login")) {
+						System.out.println("Invalid Login\n");
+						disconnect();
+						System.exit(0);
+					} 
 					// if console mode print the message and add back the prompt
 					if(cg == null) {
 						System.out.println(msg);
