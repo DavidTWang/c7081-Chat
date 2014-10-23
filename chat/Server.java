@@ -194,32 +194,6 @@ public class Server {
 				return;
 				
 		}
-		//Test DB connection
-//		Connection chatCon = DriverManager.getConnection("jdbc:mysql://localhost/chatdb", "chatadmin", "chat");
-//		Statement st = chatCon.createStatement();
-		
-		//Register a new account
-//		if(args[0].equals("-r")) {
-//			System.out.println("Hit 1 " + username + " " + password);
-//			String register = ("INSERT INTO Users (username, userpass, rank) "
-//					+ "VALUES ('" + username + "', '" + password + "', 1);");
-//			try {
-//				st.executeUpdate(register);
-//				System.out.println("User registered!");
-//				int userid = 0;
-//				String name = null;
-//				String checkRegister = ("SELECT * FROM Users WHERE username = '" + username + "'");
-//				ResultSet rs = st.executeQuery(checkRegister);
-//				while(rs.next()) {
-//					userid = rs.getInt("userID");
-//					name = rs.getString("username");
-//					System.out.println("User addded: Id=" + userid + " Name=" + name);
-//				}
-//			} catch (SQLException e) {
-//				System.err.println(e);
-//			}
-//			return;
-//		}
 		
 		// create a server object and start it
 		Server server = new Server(portNumber);
@@ -242,6 +216,8 @@ public class Server {
 		ChatMessage cm;
 		// the date I connect
 		String date;
+		Connection chatCon;
+		Statement st;
 
 		// Constructore
 		ClientThread(Socket socket) {
@@ -252,6 +228,7 @@ public class Server {
 			System.out.println("Thread trying to create Object Input/Output Streams");
 			try
 			{
+				System.out.println("Created I/O streams");
 				// create output first
 				sOutput = new ObjectOutputStream(socket.getOutputStream());
 				sInput  = new ObjectInputStream(socket.getInputStream());
@@ -259,12 +236,11 @@ public class Server {
 				username = (String) sInput.readObject();
 				password = (String) sInput.readObject();
 				
-				Connection chatCon = DriverManager.getConnection("jdbc:mysql://localhost/chatdb", "chatadmin", "chat");
-				Statement st = chatCon.createStatement();
-				String checkUser = ("SELECT * FROM Users WHERE username = '" + username + "'"
-						+ " AND userpass = '" + password + "';");
+				chatCon = DriverManager.getConnection("jdbc:mysql://db4free.net:3306/c7081chat", "c7081chat", "admin123");
+				st = chatCon.createStatement();
+				String checkUser = ("SELECT * FROM users WHERE username = '" + username + "'"
+						+ " AND password = '" + password + "';");
 				ResultSet rs = st.executeQuery(checkUser);
-				
 				
 				if(rs.next()) {
 					display(rs.getString("username") + " just connected.");
@@ -283,6 +259,8 @@ public class Server {
 			// but I read a String, I am sure it will work
 			catch (ClassNotFoundException e) {
 			} catch (SQLException ex) {
+				display("Error logging in: " + ex);
+				return;
 			} 
 			date = new Date().toString() + "\n";
 		}
@@ -326,12 +304,27 @@ public class Server {
 					break;
 				case ChatMessage.REGISTER: // /register username password 
 					if(userRank == 100) {
-						// Take message, divide up "REGISTER USERNAME PASSWORD RANK"
-						// Rank is optional, defaults to 1
-						// Make sure to check if USERNAME and PASSWORD are present
-						// And then run a SQL statement (function) to add the user
-						// Check if user is already present, if so, display accordingly
-						
+						String[] command = message.split(" ");
+						int i;
+						for(i = 0; i<=command.length-1; i++) {
+							System.out.println(command[i]);
+						}
+						if(i < 3) {
+							writeMsg("Please provide the Username and password (/register username password)\n");
+							break;
+						}
+						String newUsername = command[1];
+						String newPassword = command[2];
+						String register = ("INSERT INTO users (username, password, rank) "
+								+ "VALUES ('" + newUsername + "', '" + newPassword + "', 1);");
+						try {
+							int result = st.executeUpdate(register);
+							if(result == 1) {
+								writeMsg("User Created\n");
+							}
+						} catch (SQLException ex) {
+							display("Error while executing SQL " + ex);
+						}
 					} else {
 						writeMsg("You do not have sufficent permissions to register new users\n");
 					}

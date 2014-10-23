@@ -210,6 +210,7 @@ public class Client  {
 			System.out.print("> ");
 			// read message from user
 			String msg = scan.nextLine();
+			String[] command = msg.split(" ", 2);
 			
 			// logout if message is LOGOUT
 			if(msg.equalsIgnoreCase("LOGOUT")) {
@@ -221,8 +222,8 @@ public class Client  {
 			else if(msg.equalsIgnoreCase("WHOISIN")) {
 				client.sendMessage(new ChatMessage(ChatMessage.WHOISIN, ""));				
 			}
-			else if(msg.equalsIgnoreCase("/REGISTER")) {
-				client.sendMessage(new ChatMessage(ChatMessage.REGISTER, ""));
+			else if(command[0].equalsIgnoreCase("/REGISTER")) {
+				client.sendMessage(new ChatMessage(ChatMessage.REGISTER, msg));
 			}
 			else {				// default to ordinary message
 				client.sendMessage(new ChatMessage(ChatMessage.MESSAGE, msg));
