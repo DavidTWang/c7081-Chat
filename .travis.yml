@@ -3,5 +3,5 @@ jdk:
   - oraclejdk8
   - openjdk7
 before_script:
-	- mysql -e 'create database myapp_test;'
-	- mysql -e 'create database c7081chat;'
+  - mysql -e 'create database myapp_test;'
+  - mysql -e 'create database c7081chat;'
