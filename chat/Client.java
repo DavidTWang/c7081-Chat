@@ -74,7 +74,7 @@ public class Client  {
 			display("Exception creating new Input/output Streams: " + eIO);
 			return false;
 		}
-
+		display("Logging in... ");
 		// creates the Thread to listen from the server 
 		new ListenFromServer().start();
 		
@@ -163,31 +163,22 @@ public class Client  {
 		String serverAddress = "localhost";
 		String userName = "Anonymous";
 		String passwd = "blank";
-
+		
 		// depending of the number of arguments provided we fall through
 		switch(args.length) {
-			// > javac Client username portNumber serverAddr
-			case 4:
-				serverAddress = args[3];
-			// > javac Client username portNumber
-			case 3:
+			// > javac Client  portNumber serverAddr
+			case 2:
+				serverAddress = args[1];
+			// > javac Client  portNumber
+			case 1:
 				try {
-					portNumber = Integer.parseInt(args[2]);
+					portNumber = Integer.parseInt(args[0]);
 				}
 				catch(Exception e) {
 					System.out.println("Invalid port number.");
-					System.out.println("Usage is: > java Client [username] [portNumber] [serverAddress]");
+					System.out.println("Usage is: > java Client [portNumber] [serverAddress]");
 					return;
 				}
-			// > java Client username passwd
-			case 2:
-				userName = args[0];
-				passwd = args[1];
-				break;
-			// > java Client username
-			case 1: 
-				System.out.println("Please include your password");
-				return;
 			// > java Client
 			case 0:
 				break;
@@ -196,13 +187,18 @@ public class Client  {
 				System.out.println("Usage is: > java Client [username] [portNumber] [serverAddress]");
 			return;
 		}
+		Scanner input = new Scanner(System.in);
+		System.out.print("Username: ");
+		userName = input.next();
+		System.out.print("Password: ");
+		passwd = input.next();
+		
 		// create the Client object
 		Client client = new Client(serverAddress, portNumber, userName, passwd);
 		// test if we can start the connection to the Server
 		// if it failed nothing we can do
 		if(!client.start())
 			return;
-		
 		// wait for messages from user
 		Scanner scan = new Scanner(System.in);
 		// loop forever for message from the user
@@ -224,6 +220,12 @@ public class Client  {
 			}
 			else if(command[0].equalsIgnoreCase("/REGISTER")) {
 				client.sendMessage(new ChatMessage(ChatMessage.REGISTER, msg));
+			}
+			else if(command[0].equalsIgnoreCase("/GROUP")) {
+				client.sendMessage(new ChatMessage(ChatMessage.GROUP, msg));
+			}
+			else if(command[0].equalsIgnoreCase("/EDIT")) {
+				client.sendMessage(new ChatMessage(ChatMessage.EDIT, msg));
 			}
 			else {				// default to ordinary message
 				client.sendMessage(new ChatMessage(ChatMessage.MESSAGE, msg));
@@ -248,14 +250,19 @@ public class Client  {
 						System.out.println("Invalid Login\n");
 						disconnect();
 						System.exit(0);
-					} 
-					// if console mode print the message and add back the prompt
-					if(cg == null) {
-						System.out.println(msg);
-						System.out.print("> ");
-					}
-					else {
-						cg.append(msg);
+					} else {
+						// if console mode print the message and add back the prompt
+						String formatted_msg[] = msg.split(" @ ");
+						if(formatted_msg.length > 1) {
+							msg = formatted_msg[1];
+						}
+						if(cg == null) {
+							System.out.println(msg);
+							System.out.print("> ");
+						}
+						else {
+							cg.append(msg);
+						}
 					}
 				}
 				catch(IOException e) {

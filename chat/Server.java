@@ -7,6 +7,7 @@ import java.sql.DriverManager;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
+import java.sql.PreparedStatement;
 import java.util.logging.Level;
 import java.util.logging.Logger;
 
@@ -121,10 +122,10 @@ public class Server {
 	/*
 	 *  to broadcast a message to all Clients
 	 */
-	private synchronized void broadcast(String message) {
+	private synchronized void broadcast(String message, String group) {
 		// add HH:mm:ss and \n to the message
 		String time = sdf.format(new Date());
-		String messageLf = time + " " + message + "\n";
+		String messageLf = group + " @ " + time + "  " + message + "\n";
 		// display message on console or GUI
 		if(sg == null)
 			System.out.print(messageLf);
@@ -136,9 +137,11 @@ public class Server {
 		for(int i = al.size(); --i >= 0;) {
 			ClientThread ct = al.get(i);
 			// try to write to the Client if it fails remove it from the list
-			if(!ct.writeMsg(messageLf)) {
-				al.remove(i);
-				display("Disconnected Client " + ct.username + " removed from list.");
+			if(ct.group.equalsIgnoreCase(group)) {
+				if(!ct.writeMsg(messageLf)) {
+					al.remove(i);
+					display("Disconnected Client " + ct.username + " removed from list.");
+				}
 			}
 		}
 	}
@@ -165,16 +168,7 @@ public class Server {
 	public static void main(String[] args) throws SQLException {
 		// start server on port 1500 unless a PortNumber is specified 
 		int portNumber = 1500;
-		String username = null;
-		String password = null;
 		switch(args.length) {
-			case 3:
-				//java Server register username password
-				if(args[0].equals("-r")) {
-					username = args[1];
-					password = args[2];
-				}
-				break;
 			case 2:
 				System.out.println("Invalid number of arguments");
 				return;
@@ -211,7 +205,8 @@ public class Server {
 		int id;
 		// the Username of the Client
 		String username, password;
-		int userRank;
+		int userRank, groupRank;
+		String group = "none";
 		// the only type of message a will receive
 		ChatMessage cm;
 		// the date I connect
@@ -245,6 +240,13 @@ public class Server {
 				if(rs.next()) {
 					display(rs.getString("username") + " just connected.");
 					userRank = rs.getInt("rank");
+					rs = st.executeQuery("SELECT * FROM groupUsers WHERE username = '" + username + "'");
+					if(rs.next()) {
+						group = rs.getString("groupName");
+						writeMsg("Logged in. You are in group: " + group);
+					} else {
+						writeMsg("Logged in. You are currently not in any groups");
+					}
 				} else {
 					display(username + " tried to connect, but is not registered or invalid password");
 					sOutput.writeObject("Invalid Login");
@@ -288,7 +290,11 @@ public class Server {
 				switch(cm.getType()) {
 
 				case ChatMessage.MESSAGE:
-					broadcast(username + ": " + message);
+					if(group == "none") {
+						writeMsg("Please join a group first before chatting");
+						break;
+					}
+					broadcast(username + ": " + message, group);
 					break;
 				case ChatMessage.LOGOUT:
 					display(username + " disconnected with a LOGOUT message.");
@@ -297,19 +303,21 @@ public class Server {
 				case ChatMessage.WHOISIN:
 					writeMsg("List of the users connected at " + sdf.format(new Date()) + "\n");
 					// scan al the users connected
+					int offset = 0;
 					for(int i = 0; i < al.size(); ++i) {
 						ClientThread ct = al.get(i);
-						writeMsg((i+1) + ") " + ct.username + " since " + ct.date);
+						if(ct.group.equalsIgnoreCase(group)) {
+							writeMsg((i + 1 - offset) + ") " + ct.username + " since " + ct.date);
+						} else {
+							offset++;
+						}
 					}
 					break;
+					
 				case ChatMessage.REGISTER: // /register username password 
 					if(userRank == 100) {
 						String[] command = message.split(" ");
-						int i;
-						for(i = 0; i<=command.length-1; i++) {
-							System.out.println(command[i]);
-						}
-						if(i < 3) {
+						if(command.length != 3) {
 							writeMsg("Please provide the Username and password (/register username password)\n");
 							break;
 						}
@@ -318,15 +326,156 @@ public class Server {
 						String register = ("INSERT INTO users (username, password, rank) "
 								+ "VALUES ('" + newUsername + "', '" + newPassword + "', 1);");
 						try {
-							int result = st.executeUpdate(register);
-							if(result == 1) {
-								writeMsg("User Created\n");
+							ResultSet rs = st.executeQuery("SELECT * FROM users WHERE "
+									+ "username = '" + newUsername + "';");
+							if(rs.next()) {
+								writeMsg("User already exists");
+							} else {
+								int result = st.executeUpdate(register);
+								if(result == 1) {
+									writeMsg("User Created\n");
+								}
 							}
 						} catch (SQLException ex) {
 							display("Error while executing SQL " + ex);
+							keepGoing = false;
 						}
 					} else {
 						writeMsg("You do not have sufficent permissions to register new users\n");
+					}
+					break;
+					
+				case ChatMessage.GROUP:
+					String[] command = message.split(" ");
+					if(command.length != 3) {
+						if(command[1].equalsIgnoreCase("LEAVE") == false) {
+							writeMsg("Format for creating groups: /GROUP ADD/REMOVE/JOIN/LEAVE [GROUPNAME]");
+							break;
+						}
+					}
+					String query;
+					if(command[1].equalsIgnoreCase("LEAVE")) {
+						query = "SELECT * FROM groups WHERE groupName = '" + group + "';";
+					} else {
+						query = "SELECT * FROM groups WHERE groupName = '" + command[2] + "';";
+					}
+					ResultSet result = null;
+					try {
+						result = st.executeQuery(query);
+					} catch (SQLException ex) {
+						display("Error while executing SQL " + ex);
+					}
+					try {
+						if(command[1].equalsIgnoreCase("ADD")) {
+							if (result.next()) {
+								writeMsg("Group already exists\n");
+							} else {
+								int update_result = st.executeUpdate("INSERT INTO groups (groupName) "
+										+ "VALUES ('" + command[2] + "');");
+								if (update_result == 1)
+									writeMsg("Group Created");
+								update_result = st.executeUpdate("INSERT INTO groupUsers "
+										+ "VALUES ('" + command[2] + "', '" + username + "',  100);");
+								if (update_result == 1) {
+									writeMsg("You have been added as the new Scrum Master of " + command[2]);
+									group = command[2];
+								}
+							}
+						} else if(command[1].equalsIgnoreCase("REMOVE")) {
+							if (result.next()) {
+								int update_result = st.executeUpdate("DELETE FROM groups "
+										+ "WHERE groupName = '" + command[2] + "';");
+								if(update_result == 1) {
+									writeMsg("Group removed\n");
+								}
+							} else {
+								writeMsg("Group does not exist\n");
+							}
+						} else if(command[1].equalsIgnoreCase("JOIN")) {
+							if(result.next()) {
+								//Check if user is in any groups
+								ResultSet rs = st.executeQuery("SELECT * FROM groupUsers "
+										+ "WHERE username = '" + username + "';");
+								if(rs.next()) {
+									String currentGroup = rs.getString("groupName");
+									writeMsg("You are already in group: " + currentGroup);
+								} else {
+									int update_result = st.executeUpdate("INSERT INTO groupUsers "
+											+ "VALUES('" + command[2] + "', '" + username + "', 1);");
+									if(update_result == 1) {
+										writeMsg("You have been added to " + command[2]);
+										group = command[2];
+									}
+								}
+							} else {
+								writeMsg("Group does not exist\n");
+								break;
+							}
+						} else if(command[1].equalsIgnoreCase("LEAVE")) {
+							if(result.next()) {
+								ResultSet rs = st.executeQuery("SELECT * FROM groupUsers "
+										+ "WHERE username = '" + username + "';");
+								if (rs.next()) {
+									int update_result = st.executeUpdate("DELETE FROM groupUsers "
+											+ "WHERE username = '" + username + "'"
+											+ "AND groupName = '" + group + "';");
+									if(update_result == 1) {
+										writeMsg("You have been removed from " + group);
+										group = "none";
+									}
+								} else {
+									writeMsg("You are not in any groups");
+									break;
+								}
+							} else {
+								writeMsg("Group does not exist\n");
+								break;
+							}
+						}
+					} catch (SQLException ex) {
+							display("Error while executing SQL " + ex);
+							keepGoing = false;
+					}
+					break;
+				case ChatMessage.EDIT:
+					command = message.split(" ");
+					if (command.length != 4) {
+						writeMsg("Format for creating groups: /EDIT USERNAME [FEATURE] [VARIABLE]");
+						break;
+					}
+					try {
+						// Check if user exists
+						ResultSet rs = st.executeQuery("SELECT * FROM users WHERE username "
+								+ "= '" + command[1] + "';");
+						if(rs.next()) {
+							if(command[2].equalsIgnoreCase("group")) {
+								// Check if variable group exists
+								rs = st.executeQuery("SELECT * FROM groups WHERE groupName = '" + command[3] + "';");
+								if(!rs.next()) { 
+									writeMsg("Group does not exist");
+									break;
+								}
+								// Check if user is in a group
+								rs = st.executeQuery("SELECT * FROM groupUsers WHERE username "
+										+ "= '" + command[1] + "';");
+								if(rs.next()) {
+									// Yes, user is in a group. Change it.
+									int update_result = st.executeUpdate("UPDATE groupUsers "
+											+ "SET groupName = '" + command[3] + "' "
+											+ "WHERE username = '" + command[1] + "'");
+									if(update_result == 1) {
+										writeMsg(command[1] + " is now in " + command[3]);
+									}
+								} else {
+									// No, user is not in a group, add to one
+								}
+							}
+						} else {
+							writeMsg("User does not exist");
+							break;
+						}
+					} catch (SQLException ex) {
+						display("Error while executing SQL " + ex);
 					}
 					break;
 				}
@@ -374,10 +523,6 @@ public class Server {
 				display(e.toString());
 			}
 			return true;
-		}
-		private void check_user(String username, String password) {
-			// put the checking user code from ClientThread here
-			System.out.println("Checking if user exists\n");
 		}
 	}
 }

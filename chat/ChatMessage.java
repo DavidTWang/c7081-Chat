@@ -13,11 +13,18 @@ public class ChatMessage implements Serializable {
 	// WHOISIN to receive the list of the users connected
 	// MESSAGE an ordinary message
 	// LOGOUT to disconnect from the Server
-	static final int WHOISIN = 0, MESSAGE = 1, LOGOUT = 2, REGISTER = 3;
+	static final int WHOISIN = 0, MESSAGE = 1, LOGOUT = 2, REGISTER = 3, GROUP = 4, EDIT = 5;
 	private int type;
 	private String message;
+	private int group;
 	
 	// constructor
+	ChatMessage(int type, String message, int group) {
+		this.type = type;
+		this.message = message;
+		this.group = group;
+	}
+	
 	ChatMessage(int type, String message) {
 		this.type = type;
 		this.message = message;
